@@ -1,0 +1,300 @@
+:root {
+  --win11-bg: #f0f0f0;
+  --win11-card-bg: rgba(255, 255, 255, 0.85);
+  --win11-card-bg-solid: #ffffff;
+  --win11-border: rgba(0, 0, 0, 0.07);
+  --win11-text: #1e1e1e;
+  --win11-text-secondary: #6a6a6a;
+  --win11-accent: #0078d7;
+  --win11-shadow-1: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --win11-shadow-2: 0 8px 24px rgba(0, 0, 0, 0.14);
+  --win11-radius: 16px;
+  --transition: all 0.3s cubic-bezier(0.17, 0.67, 0.5, 0.97);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--win11-bg);
+  color: var(--win11-text);
+  padding: 24px;
+  min-height: 100vh;
+  line-height: 1.5;
+}
+
+.win11-header {
+  text-align: center;
+  margin-bottom: 32px;
+  padding: 20px;
+  background: var(--win11-card-bg);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border-radius: var(--win11-radius);
+  box-shadow: var(--win11-shadow-1);
+  border: 1px solid var(--win11-border);
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.win11-header h1 {
+  font-size: 2.1rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+  background: linear-gradient(135deg, #1a1a1a, #444);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.win11-header p {
+  color: var(--win11-text-secondary);
+  font-size: 1.05rem;
+}
+
+.gallery-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 24px;
+  padding: 0 8px;
+}
+
+.gallery-item {
+  border-radius: var(--win11-radius);
+  overflow: hidden;
+  box-shadow: var(--win11-shadow-1);
+  cursor: pointer;
+  background: var(--win11-card-bg-solid);
+  transition: var(--transition);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.gallery-item:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--win11-shadow-2);
+}
+
+/* 智能比例适配系统 */
+.gallery-item img {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto; /* 关键：保留原始比例 */
+  object-fit: cover; /* 智能裁剪 */
+  transition: var(--transition);
+}
+
+/* 横图处理 */
+.gallery-item.landscape img {
+  object-position: center;
+  height: 100%;
+  width: auto;
+  max-width: none;
+}
+
+/* 竖图处理 */
+.gallery-item.portrait img {
+  object-position: center;
+  width: 100%;
+  height: auto;
+  max-height: none;
+}
+
+/* 方图处理 */
+.gallery-item.square img {
+  object-position: center;
+  width: 100%;
+  height: 100%;
+}
+
+.gallery-title {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--win11-text-secondary);
+  font-size: 0.88rem;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: var(--transition);
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  border-bottom-left-radius: var(--win11-radius);
+  border-bottom-right-radius: var(--win11-radius);
+}
+
+.gallery-item:hover .gallery-title {
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--win11-text);
+}
+
+/* Lightbox 增强 */
+.lightbox {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.88);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.lightbox.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+.lightbox-content {
+  width: 92vw;
+  max-width: 1300px;
+  height: 92vh;
+  max-height: 900px;
+  background: var(--win11-card-bg);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border-radius: var(--win11-radius);
+  border: 1px solid var(--win11-border);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.lightbox-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 16px;
+  height: 52px;
+  background: rgba(255, 255, 255, 0.55);
+  border-bottom: 1px solid var(--win11-border);
+}
+
+.lightbox-title {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--win11-text);
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lightbox-toolbar {
+  display: flex;
+  gap: 10px;
+}
+
+.lightbox-toolbar button {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--win11-border);
+  background: white;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+  color: var(--win11-text);
+}
+
+.lightbox-toolbar button:hover {
+  background: var(--win11-accent);
+  color: white;
+  border-color: var(--win11-accent);
+}
+
+.lightbox-image-wrapper {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  background: #000000;
+}
+
+#lightbox-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain; /* 关键：大图保持原始比例 */
+  transition: transform 0.2s ease;
+  cursor: grab;
+}
+
+#lightbox-image.dragging {
+  cursor: grabbing;
+}
+
+#lightbox-image[data-dragging] {
+  cursor: move !important;
+  outline: 2px dashed var(--win11-accent);
+  outline-offset: -2px;
+  transition: none !important;
+}
+
+.zoom-level {
+  min-width: 50px;
+  text-align: center;
+  font-size: 0.95rem;
+  color: var(--win11-text-secondary);
+  padding: 0 8px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 8px;
+  user-select: none;
+}
+
+/* 响应式优化 */
+@media (max-width: 768px) {
+  .gallery-container {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 16px;
+  }
+  .win11-header {
+    padding: 16px;
+  }
+  .win11-header h1 {
+    font-size: 1.7rem;
+  }
+  .gallery-title {
+    font-size: 0.82rem;
+    padding: 6px 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  body {
+    padding: 16px;
+  }
+  .gallery-container {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+  .lightbox-toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .zoom-level {
+    order: 3;
+    width: 100%;
+    margin-top: 4px;
+  }
+}

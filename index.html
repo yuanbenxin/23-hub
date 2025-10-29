@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>照片墙 · 智能适配版</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body {
+      font-family: 'Segoe UI Variable', 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(to bottom, #f0f0f0, #ffffff);
+    }
+    .gallery-loading {
+      text-align: center;
+      padding: 40px;
+      color: var(--win11-text-secondary);
+    }
+  </style>
+</head>
+<body>
+  <header class="win11-header">
+    <h1>📸 智能照片墙</h1>
+    <p>自动适配任意数量 & 尺寸的图片 · Win11 风格体验</p>
+  </header>
+
+  <main class="gallery-container">
+    <div class="gallery-loading">正在扫描图片，请稍候...</div>
+  </main>
+
+  <div id="lightbox" class="lightbox hidden">
+    <div class="lightbox-content">
+      <div class="lightbox-header">
+        <span id="lightbox-title" class="lightbox-title">图片标题</span>
+        <div class="lightbox-toolbar">
+          <button id="reset" title="重置">⟲</button>
+          <button id="zoom-in" title="放大">🔍+</button>
+          <button id="zoom-out" title="缩小">🔍−</button>
+          <span id="zoom-level" class="zoom-level">100%</span>
+          <button id="download" title="下载">💾</button>
+          <button id="close" title="关闭">✕</button>
+        </div>
+      </div>
+      <div class="lightbox-image-wrapper">
+        <img id="lightbox-image" src="" alt="查看大图" draggable="false" />
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

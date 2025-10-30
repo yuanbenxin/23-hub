@@ -1,0 +1,81 @@
+name: Generate Images JSON
+
+on:
+  push:
+    paths:
+      - 'images/**'
+    branches: [ main ]
+  workflow_dispatch: # 允许手动触发
+
+jobs:
+  generate-images-json:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref }}
+          fetch-depth: 0
+
+      - name: Generate images.json
+        id: generate
+        run: |
+          # 创建临时目录
+          mkdir -p temp
+          
+          # 生成 images.json（只包含支持的图片格式）
+          find images -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" -o -iname "*.gif" \) | \
+          sed 's/^/"/; s/$/",/' | \
+          sed '$ s/,$//' > temp/images.json
+          
+          # 添加方括号形成有效JSON
+          echo "[" > temp/new_images.json
+          cat temp/images.json >> temp/new_images.json
+          echo "]" >> temp/new_images.json
+          
+          # 检查是否有图片
+          if [ $(wc -l < temp/images.json) -eq 0 ]; then
+            echo "[]" > temp/new_images.json
+            echo "No images found" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Found $(wc -l < temp/images.json) images" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # 复制到仓库根目录
+          cp temp/new_images.json images.json
+          
+          # 设置输出变量
+          echo "images_count=$(wc -l < temp/images.json)" >> $GITHUB_OUTPUT
+
+      - name: Commit and push changes
+        id: commit
+        if: steps.generate.outputs.images_count != 0
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          
+          # 检查是否有更改
+          if git diff --quiet images.json; then
+            echo "No changes to images.json" >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+          
+          # 提交更改
+          git add images.json
+          git commit -m "🤖 Auto-update images.json [skip ci]"
+          
+          # 推送到仓库
+          git push origin ${{ github.head_ref || github.ref }}
+          
+          echo "Updated images.json with $(cat images.json | jq '. | length') images" >> $GITHUB_STEP_SUMMARY
+
+      - name: Show summary
+        if: always()
+        run: |
+          echo "## Images JSON Generator" >> $GITHUB_STEP_SUMMARY
+          echo "- Images found: ${{ steps.generate.outputs.images_count || 0 }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY

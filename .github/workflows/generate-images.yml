@@ -1,25 +1,32 @@
 name: Generate Images JSON
 
+# 触发条件：当 images/ 目录发生变化时
 on:
   push:
     paths:
       - 'images/**'
-    branches: [ main ]
-  workflow_dispatch: # 允许手动触发
+    branches: [ main, master ]  # 同时支持 main 和 master 分支
+  workflow_dispatch:  # 允许手动触发
+
+# 必要权限配置（关键修复！）
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
   generate-images-json:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
+    environment: github-pages  # 确保有权限更新 GitHub Pages
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref || github.ref }}
-          fetch-depth: 0
+          fetch-depth: 0  # 获取完整历史记录
+
+      - name: Install jq (for JSON processing)
+        run: sudo apt-get update && sudo apt-get install -y jq
 
       - name: Generate images.json
         id: generate
@@ -27,8 +34,8 @@ jobs:
           # 创建临时目录
           mkdir -p temp
           
-          # 生成 images.json（只包含支持的图片格式）
-          find images -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" -o -iname "*.gif" \) | \
+          # 生成 images.json（支持常见图片格式）
+          find images -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" -o -iname "*.gif" \) 2>/dev/null | \
           sed 's/^/"/; s/$/",/' | \
           sed '$ s/,$//' > temp/images.json
           
@@ -38,25 +45,26 @@ jobs:
           echo "]" >> temp/new_images.json
           
           # 检查是否有图片
-          if [ $(wc -l < temp/images.json) -eq 0 ]; then
-            echo "[]" > temp/new_images.json
-            echo "No images found" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "Found $(wc -l < temp/images.json) images" >> $GITHUB_STEP_SUMMARY
-          fi
+          IMAGE_COUNT=$(wc -l < temp/images.json | awk '{print $1}')
+          echo "Found $IMAGE_COUNT images" >> $GITHUB_STEP_SUMMARY
           
           # 复制到仓库根目录
           cp temp/new_images.json images.json
           
           # 设置输出变量
-          echo "images_count=$(wc -l < temp/images.json)" >> $GITHUB_OUTPUT
+          echo "images_count=$IMAGE_COUNT" >> $GITHUB_OUTPUT
+          
+          # 显示结果
+          echo "Generated images.json with $IMAGE_COUNT images"
+          cat images.json
 
       - name: Commit and push changes
         id: commit
-        if: steps.generate.outputs.images_count != 0
+        # 仅当有图片时才提交
+        if: steps.generate.outputs.images_count != '0'
         run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           
           # 检查是否有更改
           if git diff --quiet images.json; then
@@ -68,10 +76,11 @@ jobs:
           git add images.json
           git commit -m "🤖 Auto-update images.json [skip ci]"
           
-          # 推送到仓库
-          git push origin ${{ github.head_ref || github.ref }}
+          # 推送到仓库（关键：使用 GITHUB_TOKEN）
+          git push "https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" \
+            ${{ github.head_ref || github.ref }}
           
-          echo "Updated images.json with $(cat images.json | jq '. | length') images" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Updated images.json with $(cat images.json | jq '. | length') images" >> $GITHUB_STEP_SUMMARY
 
       - name: Show summary
         if: always()
@@ -79,3 +88,4 @@ jobs:
           echo "## Images JSON Generator" >> $GITHUB_STEP_SUMMARY
           echo "- Images found: ${{ steps.generate.outputs.images_count || 0 }}" >> $GITHUB_STEP_SUMMARY
           echo "- Status: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Branch: ${{ github.ref }}" >> $GITHUB_STEP_SUMMARY

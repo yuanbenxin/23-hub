@@ -1,14 +1,13 @@
 name: Generate Images JSON
 
-# 触发条件：当 images/ 目录发生变化时
 on:
   push:
     paths:
       - 'images/**'
-    branches: [ main, master ]  # 同时支持 main 和 master 分支
-  workflow_dispatch:  # 允许手动触发
+    branches: [ main, master ]
+  workflow_dispatch:
 
-# 必要权限配置（关键修复！）
+# 必要权限配置
 permissions:
   contents: write
   pull-requests: write
@@ -16,16 +15,15 @@ permissions:
 jobs:
   generate-images-json:
     runs-on: ubuntu-latest
-    environment: github-pages  # 确保有权限更新 GitHub Pages
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref || github.ref }}
-          fetch-depth: 0  # 获取完整历史记录
+          fetch-depth: 0
 
-      - name: Install jq (for JSON processing)
+      - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
       - name: Generate images.json
@@ -34,33 +32,47 @@ jobs:
           # 创建临时目录
           mkdir -p temp
           
-          # 生成 images.json（支持常见图片格式）
-          find images -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" -o -iname "*.gif" \) 2>/dev/null | \
-          sed 's/^/"/; s/$/",/' | \
-          sed '$ s/,$//' > temp/images.json
+          # 查找所有支持的图片格式
+          find images -type f \( \
+            -iname "*.jpg" -o \
+            -iname "*.jpeg" -o \
+            -iname "*.png" -o \
+            -iname "*.webp" -o \
+            -iname "*.gif" \
+          \) 2>/dev/null | sort > temp/image_paths.txt
           
-          # 添加方括号形成有效JSON
+          # 生成有效的 JSON 数组
           echo "[" > temp/new_images.json
-          cat temp/images.json >> temp/new_images.json
-          echo "]" >> temp/new_images.json
+          while IFS= read -r file; do
+            # 转义特殊字符
+            json_path=$(echo "$file" | sed 's/"/\\"/g')
+            echo "\"$json_path\"," >> temp/new_images.json
+          done < temp/image_paths.txt
           
-          # 检查是否有图片
-          IMAGE_COUNT=$(wc -l < temp/images.json | awk '{print $1}')
-          echo "Found $IMAGE_COUNT images" >> $GITHUB_STEP_SUMMARY
+          # 移除最后一个逗号并关闭数组
+          if [ $(wc -l < temp/new_images.json) -gt 1 ]; then
+            sed '$ s/,$//' temp/new_images.json > temp/final_images.json
+            mv temp/final_images.json temp/new_images.json
+          fi
+          echo "]" >> temp/new_images.json
           
           # 复制到仓库根目录
           cp temp/new_images.json images.json
           
-          # 设置输出变量
-          echo "images_count=$IMAGE_COUNT" >> $GITHUB_OUTPUT
+          # 验证 JSON 格式
+          if ! jq empty images.json; then
+            echo "❌ images.json 格式无效"
+            cat images.json
+            exit 1
+          fi
           
-          # 显示结果
-          echo "Generated images.json with $IMAGE_COUNT images"
-          cat images.json
+          # 计算图片数量
+          IMAGE_COUNT=$(cat images.json | jq '. | length')
+          echo "Found $IMAGE_COUNT images" >> $GITHUB_STEP_SUMMARY
+          echo "images_count=$IMAGE_COUNT" >> $GITHUB_OUTPUT
 
       - name: Commit and push changes
         id: commit
-        # 仅当有图片时才提交
         if: steps.generate.outputs.images_count != '0'
         run: |
           git config user.name "github-actions[bot]"
@@ -76,7 +88,7 @@ jobs:
           git add images.json
           git commit -m "🤖 Auto-update images.json [skip ci]"
           
-          # 推送到仓库（关键：使用 GITHUB_TOKEN）
+          # 推送到仓库
           git push "https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" \
             ${{ github.head_ref || github.ref }}
           

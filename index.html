@@ -2,47 +2,76 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>23照片墙</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="description" content="一个精美的 Win11 风格照片墙，自动展示您的图片收藏" />
+  
+  <!-- 强制不缓存 -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  
+  <title>照片墙 · Win11 风格</title>
+  
+  <!-- Win11 字体优化 -->
+  <link href="https://fonts.googleapis.com/css2?family=Segoe+UI+Variable:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;1,200;1,300;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
+  
+  <!-- 图标 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
   <link rel="stylesheet" href="style.css" />
-  <style>
-    body {
-      font-family: 'Segoe UI Variable', 'Segoe UI', system-ui, -apple-system, sans-serif;
-      background: linear-gradient(to bottom, #f0f0f0, #ffffff);
-    }
-    .gallery-loading {
-      text-align: center;
-      padding: 40px;
-      color: var(--win11-text-secondary);
-    }
-  </style>
 </head>
 <body>
-  <header class="win11-header">
-    <h1>📸 23御用照片墙</h1>
-    <p>这是23班的照片展示站点，就这么简单</p>
-    <p>请使用PullRequest，push你想要展示的照片到Github存储库“23-hub”的images文件夹下</p>
-  </header>
+  <div class="app-container">
+    <header class="win11-header">
+      <div class="header-content">
+        <h1><i class="fas fa-images"></i> 我的照片墙</h1>
+        <p class="header-subtitle">自动展示您的精彩瞬间 · Win11 风格体验</p>
+      </div>
+    </header>
 
-  <main class="gallery-container">
-    <div class="gallery-loading">正在扫描图片，请稍候...</div>
-  </main>
+    <main class="gallery-container">
+      <!-- 图片由 JS 动态生成 -->
+      <div class="gallery-loading">
+        <div class="loading-spinner"></div>
+        <p>正在加载图片...</p>
+      </div>
+    </main>
 
+    <footer class="app-footer">
+      <div class="footer-content">
+        <p>© <span id="current-year"></span> 我的照片收藏 | 基于 GitHub Pages 构建</p>
+        <div class="footer-actions">
+          <button id="refresh-btn" title="刷新图片">
+            <i class="fas fa-sync-alt"></i> 刷新
+          </button>
+          <button id="theme-toggle" title="切换主题">
+            <i class="fas fa-moon"></i> 暗色
+          </button>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Lightbox 模态框 -->
   <div id="lightbox" class="lightbox hidden">
     <div class="lightbox-content">
       <div class="lightbox-header">
         <span id="lightbox-title" class="lightbox-title">图片标题</span>
         <div class="lightbox-toolbar">
-          <button id="reset" title="重置">⟲</button>
-          <button id="zoom-in" title="放大">🔍+</button>
-          <button id="zoom-out" title="缩小">🔍−</button>
+          <button id="reset" title="重置视图"><i class="fas fa-redo"></i></button>
+          <button id="zoom-out" title="缩小"><i class="fas fa-search-minus"></i></button>
           <span id="zoom-level" class="zoom-level">100%</span>
-          <button id="download" title="下载">💾</button>
-          <button id="close" title="关闭">✕</button>
+          <button id="zoom-in" title="放大"><i class="fas fa-search-plus"></i></button>
+          <button id="download" title="下载图片"><i class="fas fa-download"></i></button>
+          <button id="close" title="关闭"><i class="fas fa-times"></i></button>
         </div>
       </div>
       <div class="lightbox-image-wrapper">
         <img id="lightbox-image" src="" alt="查看大图" draggable="false" />
+        <div class="image-info">
+          <span id="image-dimensions">0 × 0</span>
+          <span id="image-size">0 KB</span>
+        </div>
       </div>
     </div>
   </div>
@@ -50,4 +79,3 @@
   <script src="script.js"></script>
 </body>
 </html>
-<!-- 由本新同学，带着❤️构建 -->

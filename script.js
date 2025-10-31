@@ -1,11 +1,5 @@
-/**
- * 照片墙系统 - 终极可靠版
- * 特点：
- *  - 自动处理路径问题（子目录部署）
- *  - 详细的错误诊断和恢复机制
- *  - 100% 兼容 GitHub Pages
- *  - 支持暗色模式
- */
+// 更新：卡片自适应图片尺寸
+// 修复：卡片点击问题
 
 document.addEventListener('DOMContentLoaded', () => {
   // ===== 初始化 =====
@@ -104,7 +98,7 @@ function getBasePath() {
 }
 
 /**
- * 加载图片列表（终极修复版）
+ * 加载图片列表（自适应尺寸版）
  */
 function loadImages(forceRefresh = false) {
   const galleryContainer = document.querySelector('.gallery-container');
@@ -283,7 +277,7 @@ function loadImages(forceRefresh = false) {
 }
 
 /**
- * 创建单个图片项
+ * 创建单个图片项（自适应尺寸版）
  */
 function createGalleryItem(container, src) {
   const filename = src.split('/').pop();
@@ -292,6 +286,12 @@ function createGalleryItem(container, src) {
   // 创建图片项
   const card = document.createElement('div');
   card.className = 'gallery-item';
+  
+  // ===== 新增：图片容器（关键修复） =====
+  const imageContainer = document.createElement('div');
+  imageContainer.className = 'image-container';
+  // 初始设置为1:1，将在图片加载后更新
+  imageContainer.dataset.aspectRatio = '1';
   
   const img = document.createElement('img');
   img.src = src;
@@ -306,28 +306,65 @@ function createGalleryItem(container, src) {
     card.title = '图片加载失败';
   };
   
+  // ===== 新增：动态计算宽高比 =====
+  img.onload = () => {
+    const aspectRatio = img.naturalWidth / img.naturalHeight;
+    imageContainer.dataset.aspectRatio = aspectRatio.toFixed(4);
+    
+    // 更新容器样式
+    imageContainer.style.aspectRatio = aspectRatio;
+    imageContainer.style.paddingTop = `calc(100% / ${aspectRatio})`;
+  };
+  
   const titleEl = document.createElement('div');
   titleEl.className = 'gallery-title';
   titleEl.textContent = title;
   
-  card.appendChild(img);
+  // 组装结构
+  imageContainer.appendChild(img);
+  card.appendChild(imageContainer);
   card.appendChild(titleEl);
+  
+  // 设置数据属性
   card.dataset.src = src;
   card.dataset.title = title;
   
-  // 添加点击事件
+  // 修复：正确处理点击事件
   card.addEventListener('click', (e) => {
-    // 防止标题点击触发两次
-    if (e.target === titleEl || e.target === img) return;
+    // 仅当点击的是卡片本身（而非子元素）时忽略
+    if (e.target === card) {
+      return;
+    }
     
-    openLightbox(src, title);
+    // 确保 lightbox 函数可用
+    if (typeof window.openLightbox === 'function') {
+      window.openLightbox(src, title);
+    } else {
+      console.error('lightbox 函数未定义');
+      alert('图片查看器未正确初始化，请刷新页面');
+    }
+  });
+  
+  // 为图片和标题单独添加点击事件（更可靠的方案）
+  img.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (typeof window.openLightbox === 'function') {
+      window.openLightbox(src, title);
+    }
+  });
+  
+  titleEl.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (typeof window.openLightbox === 'function') {
+      window.openLightbox(src, title);
+    }
   });
   
   container.appendChild(card);
 }
 
 /**
- * 设置 Lightbox 系统
+ * 设置 Lightbox 系统（保持不变）
  */
 function setupLightbox() {
   const lightbox = document.getElementById('lightbox');

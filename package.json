@@ -1,0 +1,1 @@
+{ "name": "23-hub", "version": "1.0.0", "description": "23班照片墙", "main": "index.js", "scripts": { "build": "node generate-images.js" }, "dependencies": {}, "devDependencies": {}, "engines": { "node": "18.x" } }

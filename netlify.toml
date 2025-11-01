@@ -1,0 +1,6 @@
+[build]
+  command = "npx generate-images.js"
+  publish = "."
+
+[[plugins]]
+  package = "@netlify/plugin-local-build"

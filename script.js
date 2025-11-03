@@ -4,21 +4,18 @@
 // [10.31.2025]仿Win11 风格设计
 // [11.2.2025]专为 Netlify 部署优化（不依赖 GitHub Action）
 // [11.2.2025]触摸优化（未实验的功能）
-
+// [11.3.2025]修复 Netlify 路径问题（双重斜杠导致加载失败）
 document.addEventListener('DOMContentLoaded', () => {
   // ===== 初始化 =====
   initTheme();
   setupYearInFooter();
   setupThemeToggle();
   setupRefreshButton();
-  
   // ===== 加载图片 =====
   loadImages();
-  
   // ===== 设置 Lightbox =====
   setupLightbox();
 });
-
 /**
  * 初始化主题（从 localStorage 读取）
  */
@@ -30,21 +27,18 @@ function initTheme() {
     document.documentElement.removeAttribute('data-theme');
   }
 }
-
 /**
  * 设置页脚年份
  */
 function setupYearInFooter() {
   document.getElementById('current-year')?.textContent = new Date().getFullYear();
 }
-
 /**
  * 设置主题切换按钮
  */
 function setupThemeToggle() {
   const themeToggle = document.getElementById('theme-toggle');
   if (!themeToggle) return;
-  
   // 更新按钮图标
   function updateThemeIcon() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -52,10 +46,8 @@ function setupThemeToggle() {
       '<i class="fas fa-sun"></i> 亮色' : 
       '<i class="fas fa-moon"></i> 暗色';
   }
-  
   // 初始设置
   updateThemeIcon();
-  
   // 添加点击事件
   themeToggle.addEventListener('click', () => {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -69,14 +61,12 @@ function setupThemeToggle() {
     updateThemeIcon();
   });
 }
-
 /**
  * 设置刷新按钮
  */
 function setupRefreshButton() {
   const refreshBtn = document.getElementById('refresh-btn');
   if (!refreshBtn) return;
-  
   refreshBtn.addEventListener('click', () => {
     const galleryContainer = document.querySelector('.gallery-container');
     galleryContainer.innerHTML = `
@@ -85,37 +75,46 @@ function setupRefreshButton() {
         <p>正在刷新图片...</p>
       </div>
     `;
-    
     // 强制刷新缓存
     loadImages(true);
   });
 }
-
 /**
- * 获取基础路径（Netlify 兼容版）
- * Netlify 部署时，基础路径通常为根路径
+ * 获取基础路径（Netlify 兼容版 - 修复版）
+ * Netlify 部署时，基础路径应为空字符串
+ * 修复：返回空字符串，避免双重斜杠问题
  */
 function getBasePath() {
-  return '/';
+  return '';
 }
-
 /**
- * 加载图片列表（Netlify 优化版）
+ * 加载图片列表（Netlify 优化版 - 修复版）
+ * 修复：解决路径拼接导致的双重斜杠问题
  */
 function loadImages(forceRefresh = false) {
   const galleryContainer = document.querySelector('.gallery-container');
   
+  // 检查必需的 DOM 元素
+  if (!galleryContainer) {
+    console.error('❌ 错误：.gallery-container 元素不存在');
+    document.body.innerHTML = '<div style="text-align:center;padding:40px;color:red">页面结构错误，请检查HTML</div>';
+    return;
+  }
+
   // 1. 获取正确的基础路径
   const basePath = getBasePath();
-  const imageListPath = `${basePath}images.json${forceRefresh ? `?t=${Date.now()}` : ''}`;
   
-  // 2. 显示加载状态
+  // 2. 修复路径拼接（避免双重斜杠）
+  const imageListPath = basePath ? `${basePath}/images.json` : 'images.json';
+  const finalUrl = `${imageListPath}${forceRefresh ? `?t=${Date.now()}` : ''}`;
+  
+  // 3. 显示加载状态
   galleryContainer.innerHTML = `
     <div class="gallery-loading">
       <div class="loading-spinner"></div>
       <p>正在加载图片列表...</p>
       <div class="debug-info" style="font-size: 0.85rem; color: #666; margin-top: 10px;">
-        请求路径: ${imageListPath}
+        请求路径: ${finalUrl}
       </div>
     </div>
   `;
@@ -124,9 +123,9 @@ function loadImages(forceRefresh = false) {
   console.log('[23班照片墙] 开始加载图片');
   console.log('[23班照片墙] 当前 URL:', window.location.href);
   console.log('[23班照片墙] 基础路径:', basePath);
-  console.log('[23班照片墙] 请求 images.json:', imageListPath);
+  console.log('[23班照片墙] 请求 images.json:', finalUrl);
   
-  fetch(imageListPath)
+  fetch(finalUrl)
     .then(response => {
       console.log('[23班照片墙] images.json 响应状态:', response.status);
       
@@ -166,14 +165,7 @@ function loadImages(forceRefresh = false) {
           // 确保路径正确
           path = path.trim();
           
-          // 如果不是绝对路径，添加 basePath
-          if (!path.startsWith('/')) {
-            path = `${basePath}${path}`;
-          }
-          
-          // 处理重复斜杠
-          path = path.replace(/\/+/g, '/');
-          
+          // 修复：不再需要添加 basePath，因为路径已经正确
           return path;
         })
         .filter(path => /\.(jpe?g|png|webp|gif|bmp|svg|tiff?|heic|avif)$/i.test(path));
@@ -277,7 +269,6 @@ function loadImages(forceRefresh = false) {
       });
     });
 }
-
 /**
  * 创建单个图片项（自适应尺寸版）
  */
@@ -365,7 +356,6 @@ function createGalleryItem(container, src) {
   
   container.appendChild(card);
 }
-
 /**
  * 设置 Lightbox 系统
  */
@@ -626,7 +616,6 @@ function setupLightbox() {
     isTouchDragging = false;
   });
 }
-
 // 观隅反三
 // 君命无二
 // 凭城借一

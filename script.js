@@ -5,6 +5,7 @@
 // [11.2.2025]专为 Netlify 部署优化（不依赖 GitHub Action）
 // [11.2.2025]触摸优化（未实验的功能）
 // [11.3.2025]修复 Netlify 路径问题（双重斜杠导致加载失败）
+// [11.3.2025]添加 DOM 元素存在性检查
 document.addEventListener('DOMContentLoaded', () => {
   // ===== 初始化 =====
   initTheme();
@@ -16,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ===== 设置 Lightbox =====
   setupLightbox();
 });
+
 /**
  * 初始化主题（从 localStorage 读取）
  */
@@ -27,12 +29,14 @@ function initTheme() {
     document.documentElement.removeAttribute('data-theme');
   }
 }
+
 /**
  * 设置页脚年份
  */
 function setupYearInFooter() {
   document.getElementById('current-year')?.textContent = new Date().getFullYear();
 }
+
 /**
  * 设置主题切换按钮
  */
@@ -61,6 +65,7 @@ function setupThemeToggle() {
     updateThemeIcon();
   });
 }
+
 /**
  * 设置刷新按钮
  */
@@ -79,16 +84,18 @@ function setupRefreshButton() {
     loadImages(true);
   });
 }
+
 /**
- * 获取基础路径（Netlify 兼容版 - 修复版）
+ * 获取基础路径（Netlify 专用修复版）
  * Netlify 部署时，基础路径应为空字符串
  * 修复：返回空字符串，避免双重斜杠问题
  */
 function getBasePath() {
   return '';
 }
+
 /**
- * 加载图片列表（Netlify 优化版 - 修复版）
+ * 加载图片列表（Netlify 优化版 - 最终修复）
  * 修复：解决路径拼接导致的双重斜杠问题
  */
 function loadImages(forceRefresh = false) {
@@ -269,6 +276,7 @@ function loadImages(forceRefresh = false) {
       });
     });
 }
+
 /**
  * 创建单个图片项（自适应尺寸版）
  */
@@ -356,6 +364,7 @@ function createGalleryItem(container, src) {
   
   container.appendChild(card);
 }
+
 /**
  * 设置 Lightbox 系统
  */
@@ -616,6 +625,7 @@ function setupLightbox() {
     isTouchDragging = false;
   });
 }
+
 // 观隅反三
 // 君命无二
 // 凭城借一

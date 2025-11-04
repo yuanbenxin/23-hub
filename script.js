@@ -4,8 +4,9 @@
 // [10.31.2025]仿Win11 风格设计
 // [11.2.2025]专为 Netlify 部署优化（不依赖 GitHub Action）
 // [11.2.2025]触摸优化（未实验的功能）
-// [11.3.2025]修复 Netlify 路径问题（双重斜杠导致加载失败）
-// [11.3.2025]添加 DOM 元素存在性检查
+// [11.3.2025]修复 Netlify 永久加载问题（路径+CSS+空格）
+// [11.3.2025]移除所有 attr() 用法，使用 JS 动态设置高度
+// [11.5.2025]重写路径获取函数
 document.addEventListener('DOMContentLoaded', () => {
   // ===== 初始化 =====
   initTheme();
@@ -87,16 +88,26 @@ function setupRefreshButton() {
 
 /**
  * 获取基础路径（Netlify 专用修复版）
- * Netlify 部署时，基础路径应为空字符串
- * 修复：返回空字符串，避免双重斜杠问题
+ * 修复：返回空字符串，避免 //images.json 问题
  */
 function getBasePath() {
   return '';
 }
 
 /**
- * 加载图片列表（Netlify 优化版 - 最终修复）
- * 修复：解决路径拼接导致的双重斜杠问题
+ * 带超时的 fetch 请求
+ */
+function fetchWithTimeout(url, options = {}, timeout = 8000) {
+  return Promise.race([
+    fetch(url, options),
+    new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('请求超时（8秒）')), timeout)
+    )
+  ]);
+}
+
+/**
+ * 加载图片列表（终极修复版）
  */
 function loadImages(forceRefresh = false) {
   const galleryContainer = document.querySelector('.gallery-container');
@@ -108,12 +119,10 @@ function loadImages(forceRefresh = false) {
     return;
   }
 
-  // 1. 获取正确的基础路径
+  // 1. 获取正确的基础路径（空字符串）
   const basePath = getBasePath();
-  
-  // 2. 修复路径拼接（避免双重斜杠）
-  const imageListPath = basePath ? `${basePath}/images.json` : 'images.json';
-  const finalUrl = `${imageListPath}${forceRefresh ? `?t=${Date.now()}` : ''}`;
+  // 2. 直接使用相对路径（关键修复）
+  const imageListPath = 'images.json' + (forceRefresh ? `?t=${Date.now()}` : '');
   
   // 3. 显示加载状态
   galleryContainer.innerHTML = `
@@ -121,45 +130,30 @@ function loadImages(forceRefresh = false) {
       <div class="loading-spinner"></div>
       <p>正在加载图片列表...</p>
       <div class="debug-info" style="font-size: 0.85rem; color: #666; margin-top: 10px;">
-        请求路径: ${finalUrl}
+        请求路径: ${imageListPath}
       </div>
     </div>
   `;
   
-  // 3. 添加调试日志
+  // 4. 添加调试日志
   console.log('[23班照片墙] 开始加载图片');
   console.log('[23班照片墙] 当前 URL:', window.location.href);
-  console.log('[23班照片墙] 基础路径:', basePath);
-  console.log('[23班照片墙] 请求 images.json:', finalUrl);
+  console.log('[23班照片墙] 请求 images.json:', imageListPath);
   
-  fetch(finalUrl)
+  // 5. 使用带超时的 fetch
+  fetchWithTimeout(imageListPath)
     .then(response => {
       console.log('[23班照片墙] images.json 响应状态:', response.status);
       
-      if (response.status === 404) {
-        throw new Error('❌ images.json 文件不存在，请检查：<br>' + 
-          '1. 确保已正确配置 Netlify 构建流程<br>' +
-          '2. 确认 images/ 目录中有图片文件<br>' +
-          '3. 重新部署站点以生成 images.json');
-      }
-      
       if (!response.ok) {
-        throw new Error(`❌ 无法加载图片列表 (HTTP ${response.status})`);
+        throw new Error(`HTTP ${response.status} - ${response.statusText}`);
       }
       
-      return response.text().then(text => {
-        console.log('[23班照片墙] images.json 响应内容:', text.substring(0, 200) + '...');
-        
-        try {
-          return JSON.parse(text);
-        } catch (e) {
-          throw new Error('❌ images.json 格式错误，请检查构建日志：<br>' + 
-            `错误: ${e.message}<br>` +
-            '请确保生成的是有效的 JSON 数组');
-        }
-      });
+      return response.json();
     })
     .then(imagePaths => {
+      console.log('[23班照片墙] images.json 响应内容:', imagePaths);
+      
       // 4. 验证数据结构
       if (!Array.isArray(imagePaths)) {
         throw new Error('❌ 图片列表格式错误，应为数组');
@@ -168,13 +162,7 @@ function loadImages(forceRefresh = false) {
       // 5. 过滤有效图片路径
       const validImages = imagePaths
         .filter(path => path && typeof path === 'string')
-        .map(path => {
-          // 确保路径正确
-          path = path.trim();
-          
-          // 修复：不再需要添加 basePath，因为路径已经正确
-          return path;
-        })
+        .map(path => path.trim())
         .filter(path => /\.(jpe?g|png|webp|gif|bmp|svg|tiff?|heic|avif)$/i.test(path));
       
       if (validImages.length === 0) {
@@ -202,6 +190,8 @@ function loadImages(forceRefresh = false) {
         <div class="info-subtext">点击图片查看高清大图</div>
       `;
       galleryContainer.parentNode.insertBefore(infoBar, galleryContainer);
+      
+      console.log('[23班照片墙] ✅ 图片加载成功！');
     })
     .catch(error => {
       const errorMessage = error.message || String(error);
@@ -225,8 +215,8 @@ function loadImages(forceRefresh = false) {
             <strong>调试信息:</strong>
             <ul style="margin: 10px 0 0 20px; line-height: 1.6;">
               <li>当前 URL: ${window.location.href}</li>
-              <li>基础路径: ${getBasePath()}</li>
-              <li>仓库名: ${window.location.pathname.split('/')[1] || '根仓库'}</li>
+              <li>尝试路径: images.json</li>
+              <li>浏览器: ${navigator.userAgent}</li>
             </ul>
           </div>
           <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 15px;">
@@ -239,7 +229,7 @@ function loadImages(forceRefresh = false) {
               cursor: pointer;
               font-size: 0.95rem;
             ">重试加载</button>
-            <button id="debug-btn" style="
+            <button id="manual-check-btn" style="
               background: #f0f0f0;
               color: #333;
               border: none;
@@ -247,7 +237,7 @@ function loadImages(forceRefresh = false) {
               border-radius: 8px;
               cursor: pointer;
               font-size: 0.95rem;
-            ">查看调试信息</button>
+            ">手动检查 images.json</button>
           </div>
         </div>
       `;
@@ -263,22 +253,17 @@ function loadImages(forceRefresh = false) {
         loadImages(true);
       });
       
-      // 添加调试信息按钮
-      document.getElementById('debug-btn')?.addEventListener('click', () => {
-        alert(
-          '=== 23班照片墙 调试信息 ===\n\n' +
-          `当前 URL: ${window.location.href}\n` +
-          `基础路径: ${getBasePath()}\n` +
-          `仓库名: ${window.location.pathname.split('/')[1] || '根仓库'}\n` +
-          `浏览器: ${navigator.userAgent}\n\n` +
-          '如果问题持续存在，请联系管理员并提供此信息'
-        );
+      // 添加手动检查按钮
+      document.getElementById('manual-check-btn')?.addEventListener('click', () => {
+        const checkUrl = `${window.location.origin}/images.json`;
+        window.open(checkUrl, '_blank');
+        alert(`已打开 images.json 请检查:\n${checkUrl}\n\n如果看到有效的 JSON 内容，说明文件存在但前端无法访问`);
       });
     });
 }
 
 /**
- * 创建单个图片项（自适应尺寸版）
+ * 创建单个图片项（自适应尺寸版 - 修复CSS问题）
  */
 function createGalleryItem(container, src) {
   const filename = src.split('/').pop();
@@ -288,11 +273,11 @@ function createGalleryItem(container, src) {
   const card = document.createElement('div');
   card.className = 'gallery-item';
   
-  // ===== 新增：图片容器（关键修复） =====
+  // 创建图片容器（关键修复：不用 attr()）
   const imageContainer = document.createElement('div');
   imageContainer.className = 'image-container';
-  // 初始设置为1:1，将在图片加载后更新
-  imageContainer.dataset.aspectRatio = '1';
+  // 设置默认高度（1:1 比例）
+  imageContainer.style.paddingTop = '100%';
   
   const img = document.createElement('img');
   img.src = src;
@@ -306,16 +291,19 @@ function createGalleryItem(container, src) {
     console.error(`图片加载失败: ${src}`);
     card.style.opacity = '0.5';
     card.title = '图片加载失败';
+    
+    // 显示错误占位符
+    img.src = 'image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"><rect width="100%" height="100%" fill="%23f8f9fa"/><text x="50%" y="50%" font-family="Arial" font-size="24" fill="%236c757d" text-anchor="middle" dominant-baseline="middle">图片加载失败</text></svg>';
+    imageContainer.style.paddingTop = '100%'; // 确保有高度
   };
   
-  // ===== 新增：动态计算宽高比 =====
+  // 动态计算宽高比
   img.onload = () => {
     const aspectRatio = img.naturalWidth / img.naturalHeight;
-    imageContainer.dataset.aspectRatio = aspectRatio.toFixed(4);
-    
-    // 更新容器样式
-    imageContainer.style.aspectRatio = aspectRatio;
-    imageContainer.style.paddingTop = `calc(100% / ${aspectRatio})`;
+    // 计算 padding-top 百分比 (高度/宽度 * 100%)
+    const paddingTop = (1 / aspectRatio * 100).toFixed(2);
+    imageContainer.style.paddingTop = `${paddingTop}%`;
+    console.log(`[23班照片墙] "${title}" 比例: ${aspectRatio.toFixed(2)} → paddingTop: ${paddingTop}%`);
   };
   
   const titleEl = document.createElement('div');
@@ -333,32 +321,11 @@ function createGalleryItem(container, src) {
   
   // 修复：正确处理点击事件
   card.addEventListener('click', (e) => {
-    // 仅当点击的是卡片本身（而非子元素）时忽略
-    if (e.target === card) {
-      return;
-    }
-    
-    // 确保 lightbox 函数可用
     if (typeof window.openLightbox === 'function') {
       window.openLightbox(src, title);
     } else {
       console.error('lightbox 函数未定义');
       alert('图片查看器未正确初始化，请刷新页面');
-    }
-  });
-  
-  // 为图片和标题单独添加点击事件（更可靠的方案）
-  img.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (typeof window.openLightbox === 'function') {
-      window.openLightbox(src, title);
-    }
-  });
-  
-  titleEl.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (typeof window.openLightbox === 'function') {
-      window.openLightbox(src, title);
     }
   });
   

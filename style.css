@@ -132,6 +132,7 @@ body {
   text-align: center;
   padding: 40px 20px;
   color: var(--win11-text-secondary);
+  min-height: 200px; /* 确保有最小高度 */
 }
 
 .loading-spinner {
@@ -173,14 +174,12 @@ body {
   z-index: 10;
 }
 
-/* ===== 新增：图片容器（关键修复） ===== */
+/* ===== 修复：图片容器（移除 attr() 用法） ===== */
 .image-container {
   position: relative;
   width: 100%;
-  /* 使用 aspect-ratio 保持比例（现代浏览器） */
-  aspect-ratio: attr(data-aspect-ratio);
-  /* 传统浏览器回退方案 */
-  padding-top: calc(100% / attr(data-aspect-ratio, number, 1));
+  /* 关键修复：不再使用 attr()，由 JS 动态设置 padding-top */
+  /* aspect-ratio: unset; */
 }
 
 .gallery-item img {
@@ -483,7 +482,6 @@ body {
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: 20px;
   }
-  
   .win11-header h1 {
     font-size: 1.9rem;
   }
@@ -494,34 +492,27 @@ body {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 16px;
   }
-  
   .win11-header {
     padding: 20px 0;
   }
-  
   .header-content {
     padding: 20px;
   }
-  
   .win11-header h1 {
     font-size: 1.7rem;
     gap: 8px;
   }
-  
   .header-subtitle {
     font-size: 1rem;
   }
-  
   .lightbox-toolbar {
     gap: 8px;
   }
-  
   .lightbox-toolbar button {
     width: 38px;
     height: 38px;
     font-size: 14px;
   }
-  
   .zoom-level {
     min-width: 48px;
     font-size: 0.95rem;
@@ -534,22 +525,18 @@ body {
     grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
     gap: 14px;
   }
-  
   .win11-header h1 {
     font-size: 1.5rem;
   }
-  
   .lightbox-toolbar {
     flex-wrap: wrap;
     justify-content: center;
   }
-  
   .zoom-level {
     order: 3;
     width: 100%;
     margin-top: 6px;
   }
-  
   .footer-content {
     flex-direction: column;
     align-items: flex-start;
@@ -560,33 +547,27 @@ body {
   .app-container {
     padding: 0 16px;
   }
-  
   .gallery-container {
     grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
     gap: 12px;
   }
-  
   .header-content,
   .footer-content {
     padding: 16px;
   }
-  
   .win11-header h1 {
     font-size: 1.4rem;
   }
-  
   .lightbox-header {
     flex-direction: column;
     height: auto;
     padding: 12px;
   }
-  
   .lightbox-title {
     width: 100%;
     text-align: center;
     margin-bottom: 10px;
   }
-  
   .lightbox-toolbar {
     width: 100%;
     justify-content: center;
@@ -687,6 +668,24 @@ body {
 
 [data-theme="dark"]::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
+}
+
+/* 修复 Netlify 路径问题 */
+/* 确保图片容器始终有高度 */
+.image-container {
+  min-height: 150px;
+}
+
+/* 图片加载失败占位符 */
+.gallery-item img[src^="image/svg+xml"] {
+  background: #f8f9fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6c757d;
+  font-size: 14px;
+  text-align: center;
+  padding: 20px;
 }
 
 /* 愿此行，终抵群星！ */
